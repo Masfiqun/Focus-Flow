@@ -1,17 +1,35 @@
-# focus_flow
+# FocusFlow
 
-A new Flutter project.
+A responsive Flutter productivity app.
 
-## Getting Started
+## Concept
 
-This project is a starting point for a Flutter application.
+FocusFlow is a productivity-focused mobile UI designed to help
+users manage tasks, start focus sessions, and track productivity.
 
-A few resources to get you started if this is your first Flutter project:
+## Screens
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Home
+- Focus Session
+- Statistics
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-"# Focus-Flow" 
+## Technologies
+
+- Flutter
+- Dart
+- Material Design
+- Google Fonts
+
+## Features
+
+- Responsive UI
+- Reusable components
+- Productivity dashboard
+- Focus session interface
+- Statistics visualization
+- Consistent dark theme
+
+## Assignment
+
+Inovegen Internship Program 2026
+Flutter Mobile App Development — Week 1
