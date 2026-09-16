@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import 'focus_screen.dart';
 import 'home_screen.dart';
 import 'statistics_screen.dart';
@@ -33,31 +34,43 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: KeyedSubtree(
+          key: ValueKey(_currentIndex),
+          child: _screens[_currentIndex],
+        ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _onDestinationSelected,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            selectedIcon: Icon(Icons.timer_rounded),
-            label: 'Focus',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart_rounded),
-            label: 'Stats',
-          ),
-        ],
-      ),
+      bottomNavigationBar: _buildNavigationBar(),
+    );
+  }
+
+  Widget _buildNavigationBar() {
+    return NavigationBar(
+      selectedIndex: _currentIndex,
+      onDestinationSelected: _onDestinationSelected,
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.timer_outlined),
+          selectedIcon: Icon(Icons.timer_rounded),
+          label: 'Focus',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.bar_chart_outlined),
+          selectedIcon: Icon(Icons.bar_chart_rounded),
+          label: 'Stats',
+        ),
+      ],
     );
   }
 }

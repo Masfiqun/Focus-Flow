@@ -54,18 +54,14 @@ class QuickStartCard extends StatelessWidget {
                   color: AppColors.primaryLight,
                 ),
               ),
-
               const Spacer(),
-
               Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.heading3,
               ),
-
               const SizedBox(height: 3),
-
               Row(
                 children: [
                   Expanded(

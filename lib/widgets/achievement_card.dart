@@ -37,10 +37,8 @@ class AchievementCard extends StatelessWidget {
               size: 25,
             ),
           ),
-
           const SizedBox(width: 14),
-
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -48,7 +46,7 @@ class AchievementCard extends StatelessWidget {
                   '7 Day Streak',
                   style: AppTextStyles.heading3,
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'You have focused every day this week.',
                   maxLines: 2,
@@ -58,9 +56,7 @@ class AchievementCard extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(width: 8),
-
           const Icon(
             Icons.chevron_right_rounded,
             color: AppColors.textMuted,

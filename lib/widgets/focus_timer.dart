@@ -19,13 +19,19 @@ class FocusTimer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenSize = MediaQuery.sizeOf(context);
 
-    final timerSize = size ??
-        math.min(
-          screenWidth * 0.65,
+    final availableWidth = screenSize.width * 0.65;
+    final availableHeight = screenSize.height * 0.38;
+
+    final calculatedSize = math
+        .min(
+          math.min(availableWidth, availableHeight),
           280,
-        );
+        )
+        .toDouble();
+
+    final double timerSize = size ?? calculatedSize;
 
     return SizedBox(
       width: timerSize,
@@ -102,7 +108,9 @@ class _FocusTimerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _FocusTimerPainter oldDelegate) {
+  bool shouldRepaint(
+    covariant _FocusTimerPainter oldDelegate,
+  ) {
     return oldDelegate.progress != progress;
   }
 }

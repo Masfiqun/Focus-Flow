@@ -1,25 +1,28 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  // Backgrounds
-  static const background = Color(0xFF0F1014);
-  static const surface = Color(0xFF181A21);
-  static const surfaceLight = Color(0xFF20232C);
+  // Background
+  static const Color background = Color(0xFF0B0A10);
+  static const Color surface = Color(0xFF15131D);
+  static const Color surfaceLight = Color(0xFF211E2B);
 
-  // Primary
-  static const primary = Color(0xFF7C5CFC);
-  static const primaryLight = Color(0xFF9B83FF);
+  // Brand
+  static const Color primary = Color(0xFF8B5CF6);
+  static const Color primaryLight = Color(0xFFA78BFA);
 
   // Text
-  static const textPrimary = Color(0xFFF5F5F7);
-  static const textSecondary = Color(0xFF9A9CA8);
-  static const textMuted = Color(0xFF666875);
+  static const Color textPrimary = Color(0xFFF7F5FF);
+  static const Color textSecondary = Color(0xFFB8B3C7);
+  static const Color textMuted = Color(0xFF777183);
 
-  // Status
-  static const success = Color(0xFF52D273);
-  static const warning = Color(0xFFFFC857);
-  static const error = Color(0xFFFF6B6B);
+  // States
+  static const Color success = Color(0xFF4ADE80);
+  static const Color warning = Color(0xFFFBBF24);
+  static const Color error = Color(0xFFF87171);
 
-  // Other
-  static const divider = Color(0xFF292C35);
+  // Borders
+  static const Color divider = Color(0xFF292633);
+
+  // Utility
+  static const Color overlay = Color(0x66000000);
 }

@@ -29,9 +29,7 @@ class TaskCard extends StatelessWidget {
       child: Row(
         children: [
           _buildCheckIndicator(),
-
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,17 +39,14 @@ class TaskCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.body.copyWith(
-                    decoration: task.isCompleted
-                        ? TextDecoration.lineThrough
-                        : null,
+                    decoration:
+                        task.isCompleted ? TextDecoration.lineThrough : null,
                     color: task.isCompleted
                         ? AppColors.textSecondary
                         : AppColors.textPrimary,
                   ),
                 ),
-
                 const SizedBox(height: 4),
-
                 Text(
                   task.category,
                   maxLines: 1,
@@ -61,9 +56,7 @@ class TaskCard extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(width: 10),
-
           Text(
             '${task.duration} min',
             style: AppTextStyles.caption.copyWith(
@@ -81,13 +74,9 @@ class TaskCard extends StatelessWidget {
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: task.isCompleted
-            ? AppColors.success
-            : Colors.transparent,
+        color: task.isCompleted ? AppColors.success : Colors.transparent,
         border: Border.all(
-          color: task.isCompleted
-              ? AppColors.success
-              : AppColors.textMuted,
+          color: task.isCompleted ? AppColors.success : AppColors.textMuted,
           width: 1.5,
         ),
       ),

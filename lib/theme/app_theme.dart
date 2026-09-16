@@ -8,9 +8,7 @@ abstract final class AppTheme {
     return ThemeData(
       brightness: Brightness.dark,
       useMaterial3: true,
-
       scaffoldBackgroundColor: AppColors.background,
-
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         onPrimary: Colors.white,
@@ -19,19 +17,20 @@ abstract final class AppTheme {
         onSurface: AppColors.textPrimary,
         error: AppColors.error,
       ),
-
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
         foregroundColor: AppColors.textPrimary,
       ),
-
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.18),
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         height: 72,
+        indicatorColor: AppColors.primary.withValues(
+          alpha: 0.18,
+        ),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) {
             if (states.contains(WidgetState.selected)) {
@@ -50,7 +49,6 @@ abstract final class AppTheme {
           },
         ),
       ),
-
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
@@ -59,13 +57,41 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
-
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          minimumSize: const Size(
+            double.infinity,
+            52,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: AppTextStyles.button,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          side: const BorderSide(
+            color: AppColors.divider,
+          ),
+          minimumSize: const Size(
+            double.infinity,
+            52,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
         thickness: 1,
       ),
-
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         displayLarge: AppTextStyles.display,
         headlineLarge: AppTextStyles.heading1,
         headlineMedium: AppTextStyles.heading2,

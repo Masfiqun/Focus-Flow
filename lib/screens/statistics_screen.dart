@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/achievement_card.dart';
 import '../widgets/productivity_score_card.dart';
@@ -35,33 +34,21 @@ class StatisticsScreen extends StatelessWidget {
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               _buildHeader(),
-
               const SizedBox(height: 24),
-
               const ProductivityScoreCard(
                 score: 86,
+                label: '',
               ),
-
               const SizedBox(height: 24),
-
               _buildSectionTitle('Overview'),
-
               const SizedBox(height: 12),
-
               _buildStatisticGrid(),
-
               const SizedBox(height: 24),
-
               const WeeklyChart(),
-
               const SizedBox(height: 24),
-
               _buildSectionTitle('Achievement'),
-
               const SizedBox(height: 12),
-
               const AchievementCard(),
-
               const SizedBox(height: 20),
             ]),
           ),
@@ -89,31 +76,20 @@ class StatisticsScreen extends StatelessWidget {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   _buildHeader(),
-
                   const SizedBox(height: 28),
-
                   const ProductivityScoreCard(
                     score: 86,
+                    label: '',
                   ),
-
                   const SizedBox(height: 24),
-
                   _buildSectionTitle('Overview'),
-
                   const SizedBox(height: 12),
-
                   _buildStatisticGrid(),
-
                   const SizedBox(height: 24),
-
                   const WeeklyChart(),
-
                   const SizedBox(height: 24),
-
                   _buildSectionTitle('Achievement'),
-
                   const SizedBox(height: 12),
-
                   const AchievementCard(),
                 ]),
               ),
@@ -125,14 +101,14 @@ class StatisticsScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Your Progress',
           style: AppTextStyles.heading1,
         ),
-        SizedBox(height: 6),
+        const SizedBox(height: 6),
         Text(
           'See how your focus is improving over time.',
           style: AppTextStyles.bodySecondary,

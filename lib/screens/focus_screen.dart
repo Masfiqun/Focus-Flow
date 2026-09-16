@@ -30,42 +30,30 @@ class FocusScreen extends StatelessWidget {
             delegate: SliverChildListDelegate([
               _buildHeader(),
               const SizedBox(height: 28),
-
               _buildSessionLabel(),
-
               const SizedBox(height: 22),
-
               const Center(
                 child: FocusTimer(
                   progress: 0.68,
                   timeText: '24:36',
                 ),
               ),
-
               const SizedBox(height: 24),
-
               _buildProgressText(),
-
               const SizedBox(height: 24),
-
               const SessionTaskCard(
                 title: 'OpenCV Practice',
                 category: 'Computer Vision',
               ),
-
               const SizedBox(height: 20),
-
               const Center(
                 child: FocusModeChip(
                   icon: Icons.volume_off_rounded,
                   label: 'Focus Mode',
                 ),
               ),
-
               const SizedBox(height: 26),
-
               _buildControls(),
-
               const SizedBox(height: 20),
             ]),
           ),
@@ -182,7 +170,7 @@ class FocusScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 13),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -190,7 +178,7 @@ class FocusScreen extends StatelessWidget {
                 'Focus Session',
                 style: AppTextStyles.heading2,
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
                 'Stay focused. You got this.',
                 style: AppTextStyles.caption,
@@ -217,7 +205,7 @@ class FocusScreen extends StatelessWidget {
   Widget _buildProgressText() {
     return Column(
       children: [
-        const Text(
+        Text(
           '68% completed',
           style: AppTextStyles.bodySecondary,
           textAlign: TextAlign.center,
@@ -286,22 +274,35 @@ class FocusScreen extends StatelessWidget {
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: AppColors.surface,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(
-            icon,
-            size: 21,
-            color: AppColors.textSecondary,
+    return Semantics(
+      button: true,
+      label: _getIconLabel(icon),
+      child: Material(
+        color: AppColors.surface,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Icon(
+              icon,
+              size: 21,
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
       ),
     );
+  }
+
+  String _getIconLabel(IconData icon) {
+    if (icon == Icons.restart_alt_rounded) {
+      return 'Restart';
+    } else if (icon == Icons.skip_next_rounded) {
+      return 'Skip';
+    }
+    return '';
   }
 }

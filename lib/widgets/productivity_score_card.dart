@@ -9,6 +9,7 @@ class ProductivityScoreCard extends StatelessWidget {
   const ProductivityScoreCard({
     super.key,
     required this.score,
+    required String label,
   });
 
   final int score;
@@ -37,7 +38,7 @@ class ProductivityScoreCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'PRODUCTIVITY SCORE',
                   style: AppTextStyles.caption,
                 ),

@@ -48,20 +48,16 @@ class WeeklyChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'WEEKLY ACTIVITY',
             style: AppTextStyles.caption,
           ),
-
           const SizedBox(height: 6),
-
-          const Text(
+          Text(
             'Focus time',
             style: AppTextStyles.heading2,
           ),
-
           const SizedBox(height: 22),
-
           SizedBox(
             height: 160,
             child: Row(
@@ -131,9 +127,7 @@ class _ChartBar extends StatelessWidget {
                   minHeight: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: isToday
-                      ? AppColors.primary
-                      : AppColors.surfaceLight,
+                  color: isToday ? AppColors.primary : AppColors.surfaceLight,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(8),
                   ),
@@ -142,17 +136,12 @@ class _ChartBar extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 9),
-
         Text(
           day,
           style: AppTextStyles.caption.copyWith(
-            color: isToday
-                ? AppColors.primaryLight
-                : AppColors.textMuted,
-            fontWeight:
-                isToday ? FontWeight.w700 : FontWeight.w500,
+            color: isToday ? AppColors.primaryLight : AppColors.textMuted,
+            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ],

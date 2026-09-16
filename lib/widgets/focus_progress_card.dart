@@ -49,23 +49,21 @@ class FocusProgressCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.bolt_rounded,
                 size: 18,
                 color: AppColors.primaryLight,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 "TODAY'S FOCUS",
                 style: AppTextStyles.caption,
               ),
             ],
           ),
-
           const SizedBox(height: 18),
-
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -79,9 +77,7 @@ class FocusProgressCard extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(width: 12),
-
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
@@ -91,9 +87,7 @@ class FocusProgressCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 18),
-
           ClipRRect(
             borderRadius: BorderRadius.circular(100),
             child: LinearProgressIndicator(
@@ -105,13 +99,11 @@ class FocusProgressCard extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Daily progress',
                 style: AppTextStyles.caption,
               ),

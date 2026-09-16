@@ -46,9 +46,7 @@ class StatisticCard extends StatelessWidget {
               color: AppColors.primaryLight,
             ),
           ),
-
           const SizedBox(height: 18),
-
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -57,16 +55,13 @@ class StatisticCard extends StatelessWidget {
               style: AppTextStyles.heading1,
             ),
           ),
-
           const SizedBox(height: 3),
-
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.caption,
           ),
-
           if (trend != null) ...[
             const SizedBox(height: 6),
             Text(
