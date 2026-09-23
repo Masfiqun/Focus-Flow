@@ -32,4 +32,26 @@ class Task {
       isCompleted: isCompleted ?? this.isCompleted,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'category': category,
+      'duration': duration,
+      'isCompleted': isCompleted,
+    };
+  }
+
+  factory Task.fromMap(Map<dynamic, dynamic> map) {
+    return Task(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String,
+      category: map['category'] as String,
+      duration: (map['duration'] as num).toInt(),
+      isCompleted: map['isCompleted'] as bool? ?? false,
+    );
+  }
 }

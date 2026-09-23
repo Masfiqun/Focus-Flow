@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'screens/main_screen.dart';
 import 'theme/app_theme.dart';
+import 'services/task_storage_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await TaskStorageService.init();
 
   runApp(const FocusFlowApp());
 }

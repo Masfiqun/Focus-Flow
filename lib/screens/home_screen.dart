@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/task.dart';
+import '../services/task_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -22,29 +23,69 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Task> _tasks = [
-    const Task(
-      id: '1',
-      title: 'Complete Flutter Assignment',
-      description: 'Finish the FocusFlow internship assignment.',
-      category: 'Study',
-      duration: 45,
-    ),
-    const Task(
-      id: '2',
-      title: 'Practice Dart',
-      description: 'Practice Dart fundamentals and problem solving.',
-      category: 'Study',
-      duration: 30,
-    ),
-    const Task(
-      id: '3',
-      title: 'Read Documentation',
-      description: 'Read Flutter documentation and learn new widgets.',
-      category: 'Work',
-      duration: 25,
-    ),
-  ];
+  List<Task> _tasks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  // ------------------------------------------------------------
+  // TASK STORAGE
+  // ------------------------------------------------------------
+
+  void _loadTasks() {
+    final savedTasks = TaskStorageService.getTasks();
+
+    // Add the original demo tasks only if storage is empty.
+    if (savedTasks.isEmpty) {
+      _createInitialTasks();
+      return;
+    }
+
+    setState(() {
+      _tasks = savedTasks;
+    });
+  }
+
+  Future<void> _createInitialTasks() async {
+    const initialTasks = [
+      Task(
+        id: '1',
+        title: 'Complete Flutter Assignment',
+        description: 'Finish the FocusFlow internship assignment.',
+        category: 'Study',
+        duration: 45,
+      ),
+      Task(
+        id: '2',
+        title: 'Practice Dart',
+        description: 'Practice Dart fundamentals and problem solving.',
+        category: 'Study',
+        duration: 30,
+      ),
+      Task(
+        id: '3',
+        title: 'Read Documentation',
+        description: 'Read Flutter documentation and learn new widgets.',
+        category: 'Work',
+        duration: 25,
+      ),
+    ];
+
+    for (final task in initialTasks) {
+      await TaskStorageService.saveTask(task);
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _tasks = initialTasks;
+    });
+  }
 
   Future<void> _openAddTaskScreen() async {
     final Task? newTask = await Navigator.push<Task>(
@@ -58,8 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    // The task has already been saved by AddTaskScreen.
     setState(() {
-      _tasks.insert(0, newTask);
+      _tasks = [
+        newTask,
+        ..._tasks,
+      ];
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -76,6 +121,96 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(
             AppRadius.medium,
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleTaskCompleted(Task task) async {
+    final updatedTask = task.copyWith(
+      isCompleted: !task.isCompleted,
+    );
+
+    await TaskStorageService.updateTask(updatedTask);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _tasks = _tasks.map((currentTask) {
+        if (currentTask.id == task.id) {
+          return updatedTask;
+        }
+
+        return currentTask;
+      }).toList();
+    });
+}
+
+  Future<void> _deleteTask(Task task) async {
+    final taskIndex = _tasks.indexWhere(
+      (currentTask) => currentTask.id == task.id,
+    );
+
+    if (taskIndex == -1) {
+      return;
+    }
+
+    await TaskStorageService.deleteTask(task.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _tasks = _tasks
+          .where(
+            (currentTask) => currentTask.id != task.id,
+          )
+          .toList();
+    });
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '"${task.title}" was deleted.',
+          style: AppTextStyles.body.copyWith(
+            color: Colors.white,
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.surfaceLight,
+        duration: const Duration(seconds: 4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            AppRadius.medium,
+          ),
+        ),
+        action: SnackBarAction(
+          label: 'UNDO',
+          textColor: AppColors.primaryLight,
+          onPressed: () async {
+            await TaskStorageService.saveTask(task);
+
+            if (!mounted) {
+              return;
+            }
+
+            final restoreIndex = taskIndex > _tasks.length
+                ? _tasks.length
+                : taskIndex;
+
+            setState(() {
+              _tasks = List<Task>.from(_tasks)
+                ..insert(
+                  restoreIndex,
+                  task,
+                );
+            });
+          },
         ),
       ),
     );
@@ -98,6 +233,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // ------------------------------------------------------------
+  // BUILD
+  // ------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -396,6 +535,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: TaskCard(
                     task: task,
+                    onToggleCompleted: () {
+                      _toggleTaskCompleted(task);
+                    },
+                    onDelete: () {
+                      _deleteTask(task);
+                    },
                   ),
                 );
               },

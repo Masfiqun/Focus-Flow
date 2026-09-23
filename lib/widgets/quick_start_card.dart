@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 
 class QuickStartCard extends StatelessWidget {
@@ -23,46 +25,52 @@ class QuickStartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(
+        AppRadius.large,
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(
+          AppRadius.large,
+        ),
         child: Container(
           constraints: const BoxConstraints(
             minHeight: 135,
           ),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(
+            AppSpacing.lg,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(
+              AppRadius.large,
+            ),
             border: Border.all(
               color: AppColors.divider,
             ),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: AppColors.primaryLight,
-                ),
+              _buildIcon(),
+
+              const SizedBox(
+                height: AppSpacing.lg,
               ),
-              const Spacer(),
+
               Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.heading3,
               ),
-              const SizedBox(height: 3),
+
+              const SizedBox(
+                height: AppSpacing.xs,
+              ),
+
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Text(
@@ -72,9 +80,15 @@ class QuickStartCard extends StatelessWidget {
                       style: AppTextStyles.caption,
                     ),
                   ),
-                  const SizedBox(width: 6),
+
+                  const SizedBox(
+                    width: AppSpacing.sm,
+                  ),
+
                   Text(
                     '$minutes min',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.primaryLight,
                     ),
@@ -84,6 +98,26 @@ class QuickStartCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildIcon() {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(
+          alpha: 0.14,
+        ),
+        borderRadius: BorderRadius.circular(
+          AppRadius.small,
+        ),
+      ),
+      child: Icon(
+        icon,
+        size: 20,
+        color: AppColors.primaryLight,
       ),
     );
   }

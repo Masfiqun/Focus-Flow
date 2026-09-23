@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/task.dart';
+import '../services/task_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
@@ -40,7 +41,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     super.dispose();
   }
 
-  void _createTask() {
+  Future<void> _createTask() async {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) {
@@ -56,6 +57,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         _durationController.text.trim(),
       ),
     );
+
+    // Save the task permanently to local storage.
+    await TaskStorageService.saveTask(task);
+
+    if (!mounted) {
+      return;
+    }
 
     Navigator.pop(context, task);
   }
