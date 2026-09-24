@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_page_route.dart';
 import '../models/task.dart';
 import '../services/task_storage_service.dart';
 import '../theme/app_colors.dart';
@@ -90,8 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openAddTaskScreen() async {
     final Task? newTask = await Navigator.push<Task>(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AddTaskScreen(),
+      AppPageRoute<Task>(
+        page: const AddTaskScreen(),
       ),
     );
 
@@ -99,12 +100,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // The task has already been saved by AddTaskScreen.
     setState(() {
-      _tasks = [
-        newTask,
-        ..._tasks,
-      ];
+      _tasks.insert(0, newTask);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -219,8 +216,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openFocusScreen() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const FocusScreen(),
+      AppPageRoute(
+        page: const FocusScreen(),
       ),
     );
   }
@@ -228,8 +225,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openStatisticsScreen() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const StatisticsScreen(),
+      AppPageRoute(
+        page: const StatisticsScreen(),
       ),
     );
   }
