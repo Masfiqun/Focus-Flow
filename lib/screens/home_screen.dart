@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/app_page_route.dart';
 import '../models/task.dart';
 import '../services/task_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/app_page_route.dart';
 import '../widgets/focus_progress_card.dart';
 import '../widgets/quick_start_card.dart';
 import '../widgets/task_card.dart';
 import 'add_task_screen.dart';
 import 'focus_screen.dart';
 import 'statistics_screen.dart';
+import 'task_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -39,9 +40,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void _loadTasks() {
     final savedTasks = TaskStorageService.getTasks();
 
-    // Add the original demo tasks only if storage is empty.
-    if (savedTasks.isEmpty) {
+    if (savedTasks.isEmpty &&
+        !TaskStorageService.initialTasksCreated) {
       _createInitialTasks();
+      return;
+    }
+
+    if (!mounted) {
       return;
     }
 
@@ -79,6 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
       await TaskStorageService.saveTask(task);
     }
 
+    await TaskStorageService.markInitialTasksCreated();
+
     if (!mounted) {
       return;
     }
@@ -87,6 +94,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _tasks = initialTasks;
     });
   }
+
+  // ------------------------------------------------------------
+  // ADD TASK
+  // ------------------------------------------------------------
 
   Future<void> _openAddTaskScreen() async {
     final Task? newTask = await Navigator.push<Task>(
@@ -104,31 +115,71 @@ class _HomeScreenState extends State<HomeScreen> {
       _tasks.insert(0, newTask);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '"${newTask.title}" was added successfully.',
-          style: AppTextStyles.body.copyWith(
-            color: Colors.white,
-          ),
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.surfaceLight,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-            AppRadius.medium,
-          ),
+    _showSnackBar(
+      '"${newTask.title}" was added successfully.',
+    );
+  }
+
+  // ------------------------------------------------------------
+  // TASK DETAILS
+  // ------------------------------------------------------------
+
+  Future<void> _openTaskDetailsScreen(Task task) async {
+    final TaskDetailsResult? result =
+        await Navigator.push<TaskDetailsResult>(
+      context,
+      AppPageRoute<TaskDetailsResult>(
+        page: TaskDetailsScreen(
+          task: task,
         ),
       ),
     );
+
+    if (!mounted) {
+      return;
+    }
+
+    // Always reload from Hive when returning from the
+    // task details screen.
+    //
+    // This catches changes made by FocusScreen, EditTaskScreen,
+    // deletion, completion, etc.
+    _loadTasks();
+
+    if (result == null) {
+      return;
+    }
+
+    if (result.action == TaskDetailsAction.updated) {
+      _showSnackBar(
+        '"${result.task.title}" was updated successfully.',
+      );
+
+      return;
+    }
+
+    if (result.action == TaskDetailsAction.deleted) {
+      // The task has already been deleted by TaskDetailsScreen.
+      //
+      // Reloading above keeps Home synchronized with Hive.
+      _showSnackBar(
+        '"${result.task.title}" was deleted.',
+      );
+    }
   }
+
+  // ------------------------------------------------------------
+  // TOGGLE COMPLETED
+  // ------------------------------------------------------------
 
   Future<void> _toggleTaskCompleted(Task task) async {
     final updatedTask = task.copyWith(
       isCompleted: !task.isCompleted,
     );
 
-    await TaskStorageService.updateTask(updatedTask);
+    await TaskStorageService.updateTask(
+      updatedTask,
+    );
 
     if (!mounted) {
       return;
@@ -143,7 +194,11 @@ class _HomeScreenState extends State<HomeScreen> {
         return currentTask;
       }).toList();
     });
-}
+  }
+
+  // ------------------------------------------------------------
+  // DELETE TASK
+  // ------------------------------------------------------------
 
   Future<void> _deleteTask(Task task) async {
     final taskIndex = _tasks.indexWhere(
@@ -154,7 +209,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    await TaskStorageService.deleteTask(task.id);
+    await TaskStorageService.deleteTask(
+      task.id,
+    );
 
     if (!mounted) {
       return;
@@ -190,7 +247,9 @@ class _HomeScreenState extends State<HomeScreen> {
           label: 'UNDO',
           textColor: AppColors.primaryLight,
           onPressed: () async {
-            await TaskStorageService.saveTask(task);
+            await TaskStorageService.saveTask(
+              task,
+            );
 
             if (!mounted) {
               return;
@@ -213,20 +272,69 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openFocusScreen() {
-    Navigator.push(
+  // ------------------------------------------------------------
+  // FOCUS SCREEN
+  // ------------------------------------------------------------
+
+  Future<void> _openFocusScreen() async {
+    final FocusSessionResult? result =
+        await Navigator.push<FocusSessionResult>(
       context,
-      AppPageRoute(
+      AppPageRoute<FocusSessionResult>(
         page: const FocusScreen(),
       ),
     );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (result != null) {
+      _loadTasks();
+
+      if (result == FocusSessionResult.completed) {
+        _showSnackBar(
+          'Focus session completed successfully.',
+        );
+      }
+    }
   }
+
+  // ------------------------------------------------------------
+  // STATISTICS SCREEN
+  // ------------------------------------------------------------
 
   void _openStatisticsScreen() {
     Navigator.push(
       context,
       AppPageRoute(
         page: const StatisticsScreen(),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // SNACKBAR
+  // ------------------------------------------------------------
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: AppTextStyles.body.copyWith(
+            color: Colors.white,
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.surfaceLight,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            AppRadius.medium,
+          ),
+        ),
       ),
     );
   }
@@ -279,7 +387,10 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(
           height: AppSpacing.xxl,
         ),
-        if (isWide) _buildWideTopSection() else _buildMobileTopSection(),
+        if (isWide)
+          _buildWideTopSection()
+        else
+          _buildMobileTopSection(),
         const SizedBox(
           height: AppSpacing.section,
         ),
@@ -530,20 +641,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.only(
                     bottom: AppSpacing.md,
                   ),
-                  child: TaskCard(
-                    task: task,
-                    onToggleCompleted: () {
-                      _toggleTaskCompleted(task);
-                    },
-                    onDelete: () {
-                      _deleteTask(task);
-                    },
-                  ),
+                  child: _buildTaskItem(task),
                 );
               },
             ).toList(),
           ),
       ],
+    );
+  }
+
+  Widget _buildTaskItem(Task task) {
+    return TaskCard(
+      task: task,
+      onTap: () {
+        _openTaskDetailsScreen(task);
+      },
+      onToggleCompleted: () {
+        _toggleTaskCompleted(task);
+      },
+      onDelete: () {
+        _deleteTask(task);
+      },
     );
   }
 

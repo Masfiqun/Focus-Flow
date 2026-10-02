@@ -5,16 +5,36 @@ import '../models/task.dart';
 class TaskStorageService {
   static const String _boxName = 'focusflow_tasks';
 
+  // Metadata key used to remember that the initial tasks
+  // have already been created once.
+  static const String _initialTasksCreatedKey =
+      '__initial_tasks_created__';
+
   static Box<dynamic>? _box;
 
-  /// Initializes Hive and opens the task storage box.
   static Future<void> init() async {
     await Hive.initFlutter();
 
     _box = await Hive.openBox<dynamic>(_boxName);
+
+    // Migration/support for existing installations:
+    //
+    // If tasks already exist from an older version of FocusFlow,
+    // consider the initial setup already completed.
+    if (_box!.get(_initialTasksCreatedKey) != true) {
+      final hasExistingTasks = _box!.values.any(
+        (value) => value is Map,
+      );
+
+      if (hasExistingTasks) {
+        await _box!.put(
+          _initialTasksCreatedKey,
+          true,
+        );
+      }
+    }
   }
 
-  /// Makes sure the Hive box is available.
   static Box<dynamic> get _taskBox {
     final box = _box;
 
@@ -28,16 +48,40 @@ class TaskStorageService {
     return box;
   }
 
-  /// Returns all saved tasks.
+  // ---------------------------------------------------------------------------
+  // INITIAL TASK SETUP
+  // ---------------------------------------------------------------------------
+
+  static bool get initialTasksCreated {
+    return _taskBox.get(
+          _initialTasksCreatedKey,
+        ) ==
+        true;
+  }
+
+  static Future<void> markInitialTasksCreated() async {
+    await _taskBox.put(
+      _initialTasksCreatedKey,
+      true,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // TASKS
+  // ---------------------------------------------------------------------------
+
   static List<Task> getTasks() {
     final tasks = <Task>[];
 
     for (final value in _taskBox.values) {
+      // Ignore metadata values.
       if (value is Map) {
         try {
-          tasks.add(Task.fromMap(value));
+          tasks.add(
+            Task.fromMap(value),
+          );
         } catch (_) {
-          // Ignore invalid stored entries.
+          // Ignore invalid entries instead of crashing the app.
         }
       }
     }
@@ -45,7 +89,6 @@ class TaskStorageService {
     return tasks;
   }
 
-  /// Saves a new task.
   static Future<void> saveTask(Task task) async {
     await _taskBox.put(
       task.id,
@@ -53,7 +96,6 @@ class TaskStorageService {
     );
   }
 
-  /// Updates an existing task.
   static Future<void> updateTask(Task task) async {
     await _taskBox.put(
       task.id,
@@ -61,18 +103,32 @@ class TaskStorageService {
     );
   }
 
-  /// Deletes a task.
   static Future<void> deleteTask(String taskId) async {
     await _taskBox.delete(taskId);
   }
 
-  /// Deletes all saved tasks.
   static Future<void> clearTasks() async {
-    await _taskBox.clear();
+    // Only delete actual task entries.
+    //
+    // Do NOT clear the entire Hive box because the
+    // initial-task flag must survive.
+    final taskIds = <dynamic>[];
+
+    for (final entry in _taskBox.toMap().entries) {
+      if (entry.key != _initialTasksCreatedKey &&
+          entry.value is Map) {
+        taskIds.add(entry.key);
+      }
+    }
+
+    if (taskIds.isEmpty) {
+      return;
+    }
+
+    await _taskBox.deleteAll(taskIds);
   }
 
-  /// Returns the number of saved tasks.
   static int get taskCount {
-    return _taskBox.length;
+    return getTasks().length;
   }
 }

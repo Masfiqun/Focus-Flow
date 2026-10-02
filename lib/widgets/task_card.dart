@@ -11,76 +11,92 @@ class TaskCard extends StatelessWidget {
     required this.task,
     required this.onToggleCompleted,
     required this.onDelete,
+    this.onTap,
   });
 
   final Task task;
   final VoidCallback onToggleCompleted;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 13,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(
           AppRadius.medium,
         ),
-        border: Border.all(
-          color: task.isCompleted
-              ? AppColors.success.withValues(alpha: 0.35)
-              : AppColors.divider,
-        ),
-      ),
-      child: Row(
-        children: [
-          _buildCheckButton(),
-          const SizedBox(width: 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 13,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(
+              AppRadius.medium,
+            ),
+            border: Border.all(
+              color: task.isCompleted
+                  ? AppColors.success.withValues(alpha: 0.35)
+                  : AppColors.divider,
+            ),
+          ),
+          child: Row(
+            children: [
+              _buildCheckButton(),
+              const SizedBox(width: 12),
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body.copyWith(
-                    decoration: task.isCompleted
-                        ? TextDecoration.lineThrough
-                        : null,
-                    color: task.isCompleted
-                        ? AppColors.textSecondary
-                        : AppColors.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.body.copyWith(
+                        decoration: task.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                        color: task.isCompleted
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      task.category,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '${task.duration} min',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  task.category,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption,
-                ),
-              ],
-            ),
+              ),
+
+              const SizedBox(width: 4),
+
+              _buildMenuButton(),
+            ],
           ),
-
-          const SizedBox(width: 8),
-
-          Text(
-            '${task.duration} min',
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-
-          const SizedBox(width: 4),
-
-          _buildMenuButton(),
-        ],
+        ),
       ),
     );
   }

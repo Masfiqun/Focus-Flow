@@ -1,5 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../models/focus_session.dart';
+import '../models/task.dart';
+import '../services/focus_session_storage_service.dart';
+import '../services/task_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/focus_mode_chip.dart';
@@ -7,15 +13,379 @@ import '../widgets/focus_timer.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/session_task_card.dart';
 
-class FocusScreen extends StatelessWidget {
-  const FocusScreen({super.key});
+enum FocusSessionResult {
+  completed,
+  skipped,
+}
+
+class FocusScreen extends StatefulWidget {
+  final Task? task;
+
+  const FocusScreen({
+    super.key,
+    this.task,
+  });
+
+  @override
+  State<FocusScreen> createState() => _FocusScreenState();
+}
+
+class _FocusScreenState extends State<FocusScreen> {
+  static const int _defaultDurationMinutes = 25;
+
+  Timer? _timer;
+
+  late int _totalSeconds;
+  late int _remainingSeconds;
+
+  late String _sessionId;
+  late DateTime _startedAt;
+
+  bool _isRunning = false;
+  bool _hasCompleted = false;
+  bool _sessionSaved = false;
+
+  Task? get _task => widget.task;
+
+  String get _taskTitle {
+    return _task?.title ?? 'Quick Focus Session';
+  }
+
+  String get _taskCategory {
+    return _task?.category ?? 'Deep Work';
+  }
+
+  int get _durationMinutes {
+    return _task?.duration ?? _defaultDurationMinutes;
+  }
+
+  double get _progress {
+    if (_totalSeconds <= 0) {
+      return 0;
+    }
+
+    final completedSeconds =
+        _totalSeconds - _remainingSeconds;
+
+    return (completedSeconds / _totalSeconds)
+        .clamp(0.0, 1.0);
+  }
+
+  int get _completedSeconds {
+    return _totalSeconds - _remainingSeconds;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _totalSeconds = _durationMinutes * 60;
+    _remainingSeconds = _totalSeconds;
+
+    _createNewSession();
+
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+
+    // The important session states are already saved when
+    // pausing, skipping, or completing.
+    super.dispose();
+  }
+
+  void _createNewSession() {
+    _sessionId =
+        DateTime.now().microsecondsSinceEpoch.toString();
+
+    _startedAt = DateTime.now();
+
+    _sessionSaved = false;
+  }
+
+  Future<void> _saveCurrentSession({
+    DateTime? completedAt,
+  }) async {
+    if (_completedSeconds <= 0 && !_hasCompleted) {
+      return;
+    }
+
+    final session = FocusSession(
+      id: _sessionId,
+      taskId: _task?.id,
+      taskTitle: _taskTitle,
+      durationSeconds: _totalSeconds,
+      completedSeconds: _completedSeconds,
+      startedAt: _startedAt,
+      completedAt: completedAt,
+    );
+
+    await FocusSessionStorageService.saveSession(
+      session,
+    );
+
+    _sessionSaved = true;
+  }
+
+  Future<void> _saveCompletedSession() async {
+    final session = FocusSession(
+      id: _sessionId,
+      taskId: _task?.id,
+      taskTitle: _taskTitle,
+      durationSeconds: _totalSeconds,
+      completedSeconds: _totalSeconds,
+      startedAt: _startedAt,
+      completedAt: DateTime.now(),
+    );
+
+    await FocusSessionStorageService.saveSession(
+      session,
+    );
+
+    _sessionSaved = true;
+  }
+
+  Future<void> _markTaskCompleted() async {
+    final task = _task;
+
+    if (task == null) {
+      return;
+    }
+
+    if (task.isCompleted) {
+      return;
+    }
+
+    final completedTask = task.copyWith(
+      isCompleted: true,
+    );
+
+    await TaskStorageService.updateTask(
+      completedTask,
+    );
+  }
+
+  void _startTimer() {
+    if (_isRunning || _hasCompleted) {
+      return;
+    }
+
+    setState(() {
+      _isRunning = true;
+    });
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) {
+        if (!mounted) {
+          return;
+        }
+
+        if (_remainingSeconds <= 1) {
+          _timer?.cancel();
+
+          setState(() {
+            _remainingSeconds = 0;
+            _isRunning = false;
+            _hasCompleted = true;
+          });
+
+          _completeSession();
+
+          return;
+        }
+
+        setState(() {
+          _remainingSeconds--;
+        });
+
+        // Keep the currently accumulated focus time persisted.
+        _saveCurrentSession();
+      },
+    );
+  }
+
+  void _pauseTimer() {
+    if (!_isRunning) {
+      return;
+    }
+
+    _timer?.cancel();
+
+    setState(() {
+      _isRunning = false;
+    });
+
+    _saveCurrentSession();
+  }
+
+  void _toggleTimer() {
+    if (_hasCompleted) {
+      return;
+    }
+
+    if (_isRunning) {
+      _pauseTimer();
+    } else {
+      _startTimer();
+    }
+  }
+
+  void _resetTimer() {
+    _timer?.cancel();
+
+    setState(() {
+      _remainingSeconds = _totalSeconds;
+      _isRunning = false;
+      _hasCompleted = false;
+    });
+
+    _createNewSession();
+
+    _startTimer();
+  }
+
+  Future<void> _completeSession() async {
+    await _saveCompletedSession();
+
+    await _markTaskCompleted();
+
+    if (!mounted) {
+      return;
+    }
+
+    await _showCompletionDialog();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.pop(
+      context,
+      FocusSessionResult.completed,
+    );
+  }
+
+  Future<void> _skipSession() async {
+    _timer?.cancel();
+
+    await _saveCurrentSession();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.pop(
+      context,
+      FocusSessionResult.skipped,
+    );
+  }
+
+  Future<void> _showCompletionDialog() async {
+    await Future<void>.delayed(Duration.zero);
+
+    if (!mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(
+                    alpha: 0.12,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: AppColors.success,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Session Complete',
+                  style: AppTextStyles.heading3,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Great work! You completed your '
+            '$_durationMinutes-minute focus session.',
+            style: AppTextStyles.bodySecondary,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: Text(
+                'Done',
+                style: AppTextStyles.button.copyWith(
+                  color: AppColors.primaryLight,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _formatTime(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:'
+          '${minutes.toString().padLeft(2, '0')}:'
+          '${seconds.toString().padLeft(2, '0')}';
+    }
+
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')}';
+  }
+
+  String _formatCompletedTime() {
+    final minutes = _completedSeconds ~/ 60;
+    final seconds = _completedSeconds % 60;
+
+    if (minutes == 0) {
+      return '$seconds sec';
+    }
+
+    if (seconds == 0) {
+      return '$minutes min';
+    }
+
+    return '$minutes min $seconds sec';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: ResponsiveLayout(
-        mobile: _buildMobile(context),
-        tablet: _buildTablet(context),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: ResponsiveLayout(
+          mobile: _buildMobile(context),
+          tablet: _buildTablet(context),
+        ),
       ),
     );
   }
@@ -25,33 +395,32 @@ class FocusScreen extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            32,
+          ),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               _buildHeader(),
               const SizedBox(height: 28),
               _buildSessionLabel(),
               const SizedBox(height: 22),
-              const Center(
+              Center(
                 child: FocusTimer(
-                  progress: 0.68,
-                  timeText: '24:36',
+                  progress: _progress,
+                  timeText: _formatTime(
+                    _remainingSeconds,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
               _buildProgressText(),
               const SizedBox(height: 24),
-              const SessionTaskCard(
-                title: 'OpenCV Practice',
-                category: 'Computer Vision',
-              ),
+              _buildTaskCard(),
               const SizedBox(height: 20),
-              const Center(
-                child: FocusModeChip(
-                  icon: Icons.volume_off_rounded,
-                  label: 'Focus Mode',
-                ),
-              ),
+              _buildFocusModeChip(),
               const SizedBox(height: 26),
               _buildControls(),
               const SizedBox(height: 20),
@@ -77,7 +446,8 @@ class FocusScreen extends StatelessWidget {
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.all(32),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: _buildTimerSection(),
@@ -120,9 +490,11 @@ class FocusScreen extends StatelessWidget {
       children: [
         _buildSessionLabel(),
         const SizedBox(height: 22),
-        const FocusTimer(
-          progress: 0.68,
-          timeText: '24:36',
+        FocusTimer(
+          progress: _progress,
+          timeText: _formatTime(
+            _remainingSeconds,
+          ),
           size: 280,
         ),
         const SizedBox(height: 24),
@@ -135,15 +507,9 @@ class FocusScreen extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const SessionTaskCard(
-          title: 'OpenCV Practice',
-          category: 'Computer Vision',
-        ),
+        _buildTaskCard(),
         const SizedBox(height: 20),
-        const FocusModeChip(
-          icon: Icons.volume_off_rounded,
-          label: 'Focus Mode',
-        ),
+        _buildFocusModeChip(),
         const SizedBox(height: 26),
         _buildControls(),
       ],
@@ -172,7 +538,8 @@ class FocusScreen extends StatelessWidget {
         const SizedBox(width: 13),
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
               Text(
                 'Focus Session',
@@ -180,7 +547,11 @@ class FocusScreen extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Stay focused. You got this.',
+                _isRunning
+                    ? 'Stay focused. You got this.'
+                    : _hasCompleted
+                        ? 'Session completed. Great work!'
+                        : 'Session paused.',
                 style: AppTextStyles.caption,
               ),
             ],
@@ -203,10 +574,12 @@ class FocusScreen extends StatelessWidget {
   }
 
   Widget _buildProgressText() {
+    final percentage = (_progress * 100).round();
+
     return Column(
       children: [
         Text(
-          '68% completed',
+          '$percentage% completed',
           style: AppTextStyles.bodySecondary,
           textAlign: TextAlign.center,
         ),
@@ -215,17 +588,41 @@ class FocusScreen extends StatelessWidget {
           widthFactor: 0.72,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(100),
-            child: const LinearProgressIndicator(
-              value: 0.68,
+            child: LinearProgressIndicator(
+              value: _progress,
               minHeight: 5,
-              backgroundColor: AppColors.surfaceLight,
-              valueColor: AlwaysStoppedAnimation(
+              backgroundColor:
+                  AppColors.surfaceLight,
+              valueColor:
+                  const AlwaysStoppedAnimation(
                 AppColors.primary,
               ),
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          '${_formatCompletedTime()} focused',
+          style: AppTextStyles.caption,
+          textAlign: TextAlign.center,
+        ),
       ],
+    );
+  }
+
+  Widget _buildTaskCard() {
+    return SessionTaskCard(
+      title: _taskTitle,
+      category: _taskCategory,
+    );
+  }
+
+  Widget _buildFocusModeChip() {
+    return const Center(
+      child: FocusModeChip(
+        icon: Icons.volume_off_rounded,
+        label: 'Focus Mode',
+      ),
     );
   }
 
@@ -235,27 +632,43 @@ class FocusScreen extends StatelessWidget {
       children: [
         _buildSecondaryControl(
           icon: Icons.restart_alt_rounded,
-          onTap: () {},
+          onTap: _resetTimer,
         ),
         const SizedBox(width: 18),
         Container(
           width: 68,
           height: 68,
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: _hasCompleted
+                ? AppColors.success
+                : AppColors.primary,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.28),
+                color: (_hasCompleted
+                        ? AppColors.success
+                        : AppColors.primary)
+                    .withValues(alpha: 0.28),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
             ],
           ),
           child: IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.pause_rounded,
+            onPressed: _hasCompleted
+                ? _resetTimer
+                : _toggleTimer,
+            tooltip: _hasCompleted
+                ? 'Restart session'
+                : _isRunning
+                    ? 'Pause session'
+                    : 'Resume session',
+            icon: Icon(
+              _hasCompleted
+                  ? Icons.replay_rounded
+                  : _isRunning
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
               color: Colors.white,
               size: 30,
             ),
@@ -264,7 +677,7 @@ class FocusScreen extends StatelessWidget {
         const SizedBox(width: 18),
         _buildSecondaryControl(
           icon: Icons.skip_next_rounded,
-          onTap: () {},
+          onTap: _skipSession,
         ),
       ],
     );
@@ -300,9 +713,12 @@ class FocusScreen extends StatelessWidget {
   String _getIconLabel(IconData icon) {
     if (icon == Icons.restart_alt_rounded) {
       return 'Restart';
-    } else if (icon == Icons.skip_next_rounded) {
+    }
+
+    if (icon == Icons.skip_next_rounded) {
       return 'Skip';
     }
+
     return '';
   }
 }
