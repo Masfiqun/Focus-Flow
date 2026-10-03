@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:focus_flow/theme/app_colors.dart';
 
 import '../models/focus_session.dart';
 import '../models/task.dart';
@@ -11,6 +12,7 @@ import '../widgets/responsive_layout.dart';
 import '../widgets/statistic_card.dart';
 import '../widgets/weekly_chart.dart';
 import '../widgets/productivity_breakdown.dart';
+import '../widgets/session_history_card.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({
@@ -26,6 +28,14 @@ class _StatisticsScreenState
     extends State<StatisticsScreen> {
   List<Task> _tasks = [];
   List<FocusSession> _sessions = [];
+
+  List<FocusSession> get _recentSessions {
+    if (_sessions.length <= 5) {
+      return _sessions;
+    }
+
+    return _sessions.take(5).toList();
+  }
 
   @override
   void initState() {
@@ -135,40 +145,6 @@ class _StatisticsScreenState
         _sessions.isEmpty) {
       return 0;
     }
-
-    // ----------------------------------------------------------
-    // 1. TASK COMPLETION SCORE
-    // ----------------------------------------------------------
-
-    // final taskScore = _totalTasks == 0
-    //     ? 0.0
-    //     : (_completedTasks / _totalTasks) * 100;
-
-    // ----------------------------------------------------------
-    // 2. FOCUS TIME SCORE
-    // ----------------------------------------------------------
-    //
-    // Target: 125 minutes of actual focus time.
-    //
-    // Once the user reaches the target, this component is capped
-    // at 100 instead of allowing the overall score to exceed 100.
-    //
-
-    // const dailyFocusTargetMinutes = 125;
-
-    // final focusScore = _todayFocusScore;
-
-    // ----------------------------------------------------------
-    // 3. SESSION COMPLETION SCORE
-    // ----------------------------------------------------------
-
-    // final sessionScore = _sessions.isEmpty
-    //     ? 0.0
-    //     : (_completedSessions / _sessions.length) * 100;
-
-    // ----------------------------------------------------------
-    // FINAL SCORE
-    // ----------------------------------------------------------
 
     final score =
         (_taskScore * 0.40) +
@@ -310,6 +286,10 @@ class _StatisticsScreenState
     );
   }
 
+  // ------------------------------------------------------------
+  // MOBILE
+  // ------------------------------------------------------------
+
   Widget _buildMobile(BuildContext context) {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -324,6 +304,7 @@ class _StatisticsScreenState
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               _buildHeader(),
+
               const SizedBox(height: 24),
 
               ProductivityScoreCard(
@@ -357,6 +338,22 @@ class _StatisticsScreenState
                 sessions: _sessions,
               ),
 
+              // ------------------------------------------------
+              // RECENT SESSIONS
+              // ------------------------------------------------
+
+              const SizedBox(height: 24),
+
+              _buildSectionTitle('Recent Sessions'),
+
+              const SizedBox(height: 12),
+
+              _buildSessionHistory(),
+
+              // ------------------------------------------------
+              // ACHIEVEMENT
+              // ------------------------------------------------
+
               const SizedBox(height: 24),
 
               _buildSectionTitle('Achievement'),
@@ -375,6 +372,10 @@ class _StatisticsScreenState
       ],
     );
   }
+
+  // ------------------------------------------------------------
+  // TABLET
+  // ------------------------------------------------------------
 
   Widget _buildTablet(BuildContext context) {
     return Center(
@@ -439,6 +440,15 @@ class _StatisticsScreenState
                     tasks: _tasks,
                     sessions: _sessions,
                   ),
+
+                  _buildSectionTitle('Recent Sessions'),
+
+                  const SizedBox(height: 12),
+
+                  _buildSessionHistory(),
+
+                  const SizedBox(height: 24),
+
                 ]),
               ),
             ),
@@ -511,7 +521,8 @@ class _StatisticsScreenState
               const SizedBox(width: 12),
               Expanded(
                 child: _buildTodayMetric(
-                  icon: Icons.check_circle_outline_rounded,
+                  icon:
+                      Icons.check_circle_outline_rounded,
                   value: '${_todaySessions.length}',
                   label: 'Sessions',
                 ),
@@ -576,7 +587,78 @@ class _StatisticsScreenState
   }
 
   // ------------------------------------------------------------
-  // STATISTICS
+  // SESSION HISTORY
+  // ------------------------------------------------------------
+
+  Widget _buildSessionHistory() {
+    if (_recentSessions.isEmpty) {
+      return _buildEmptySessionHistory();
+    }
+
+    return Column(
+      children: [
+        for (int index = 0;
+            index < _recentSessions.length;
+            index++) ...[
+          SessionHistoryCard(
+            session: _recentSessions[index],
+          ),
+          if (index != _recentSessions.length - 1)
+            const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildEmptySessionHistory() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.divider,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(
+                alpha: 0.10,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.history_rounded,
+              color: AppColors.primaryLight,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No focus sessions yet',
+            style: AppTextStyles.body.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Complete a focus session to see it here.',
+            style: AppTextStyles.caption,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // STATISTICS GRID
   // ------------------------------------------------------------
 
   Widget _buildStatisticGrid() {
@@ -648,3 +730,5 @@ class _StatisticsScreenState
     );
   }
 }
+
+

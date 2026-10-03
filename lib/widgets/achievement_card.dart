@@ -44,7 +44,82 @@ class AchievementCard extends StatelessWidget {
     );
   }
 
+  int get _currentStreak {
+    if (sessions.isEmpty) {
+      return 0;
+    }
+
+    final focusDays = <DateTime>{};
+
+    for (final session in sessions) {
+      if (session.completedSeconds <= 0) {
+        continue;
+      }
+
+      final date = session.startedAt;
+
+      focusDays.add(
+        DateTime(
+          date.year,
+          date.month,
+          date.day,
+        ),
+      );
+    }
+
+    if (focusDays.isEmpty) {
+      return 0;
+    }
+
+    final today = _dateOnly(DateTime.now());
+    final yesterday = today.subtract(
+      const Duration(days: 1),
+    );
+
+    DateTime? streakEnd;
+
+    if (focusDays.contains(today)) {
+      streakEnd = today;
+    } else if (focusDays.contains(yesterday)) {
+      streakEnd = yesterday;
+    } else {
+      return 0;
+    }
+
+    var streak = 0;
+    var currentDay = streakEnd;
+
+    while (focusDays.contains(currentDay)) {
+      streak++;
+      currentDay = currentDay.subtract(
+        const Duration(days: 1),
+      );
+    }
+
+    return streak;
+  }
+
+  DateTime _dateOnly(DateTime date) {
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+    );
+  }
+
   _Achievement get _achievement {
+    final streak = _currentStreak;
+
+    if (streak >= 7) {
+      return _Achievement(
+        title: '$streak Day Streak',
+        description:
+            'You have focused for $streak consecutive days.',
+        icon: Icons.local_fire_department_rounded,
+        color: AppColors.warning,
+      );
+    }
+
     if (_totalFocusSeconds >= 5 * 60 * 60) {
       return const _Achievement(
         title: 'Focus Master',
@@ -152,7 +227,7 @@ class AchievementCard extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          Icon(
+          const Icon(
             Icons.chevron_right_rounded,
             color: AppColors.textMuted,
           ),
