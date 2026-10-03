@@ -1,70 +1,120 @@
 import 'package:flutter/material.dart';
 
+import '../models/focus_session.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 
 class WeeklyChart extends StatelessWidget {
   const WeeklyChart({
     super.key,
+    required this.sessions,
   });
 
-  static const List<double> _values = [
-    0.42,
-    0.68,
-    0.55,
-    0.88,
-    0.72,
-    0.94,
-    0.63,
-  ];
+  final List<FocusSession> sessions;
 
-  static const List<String> _days = [
-    'M',
-    'T',
-    'W',
-    'T',
-    'F',
-    'S',
-    'S',
-  ];
+  List<_DayFocus> _buildWeeklyData() {
+    final now = DateTime.now();
+
+    final startOfToday = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final days = List.generate(
+      7,
+      (index) => startOfToday.subtract(
+        Duration(days: 6 - index),
+      ),
+    );
+
+    return days.map((day) {
+      final seconds = sessions
+          .where((session) {
+            final date = session.startedAt;
+
+            return date.year == day.year &&
+                date.month == day.month &&
+                date.day == day.day;
+          })
+          .fold<int>(
+            0,
+            (total, session) {
+              return total + session.completedSeconds;
+            },
+          );
+
+      return _DayFocus(
+        date: day,
+        minutes: seconds ~/ 60,
+      );
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final weeklyData = _buildWeeklyData();
+
+    final maxMinutes = weeklyData.fold<int>(
+      0,
+      (maximum, day) {
+        return day.minutes > maximum
+            ? day.minutes
+            : maximum;
+      },
+    );
+
+    final chartMax = maxMinutes == 0
+        ? 60
+        : ((maxMinutes / 30).ceil() * 30);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        18,
-        20,
-        18,
-        16,
+      padding: const EdgeInsets.all(
+        AppSpacing.lg,
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(
+          AppRadius.large,
+        ),
         border: Border.all(
           color: AppColors.divider,
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Text(
-            'WEEKLY ACTIVITY',
-            style: AppTextStyles.caption,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Focus time',
+            'Weekly Focus',
             style: AppTextStyles.heading2,
           ),
-          const SizedBox(height: 22),
+          const SizedBox(
+            height: AppSpacing.xs,
+          ),
+          Text(
+            'Your actual focus time over the last 7 days.',
+            style: AppTextStyles.caption,
+          ),
+          const SizedBox(
+            height: AppSpacing.xl,
+          ),
           SizedBox(
-            height: 160,
+            height: 220,
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment:
+                  CrossAxisAlignment.end,
               children: [
-                Expanded(
-                  child: _buildBars(),
+                ...weeklyData.map(
+                  (day) => Expanded(
+                    child: _buildBar(
+                      day,
+                      chartMax,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -74,77 +124,120 @@ class WeeklyChart extends StatelessWidget {
     );
   }
 
-  Widget _buildBars() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: List.generate(
-        _values.length,
-        (index) {
-          return Flexible(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4,
-              ),
-              child: _ChartBar(
-                value: _values[index],
-                day: _days[index],
-                isToday: index == 5,
+  Widget _buildBar(
+    _DayFocus day,
+    int chartMax,
+  ) {
+    final ratio = chartMax <= 0
+        ? 0.0
+        : (day.minutes / chartMax)
+            .clamp(0.0, 1.0);
+
+    final isToday = _isToday(day.date);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4,
+      ),
+      child: Column(
+        mainAxisAlignment:
+            MainAxisAlignment.end,
+        children: [
+          SizedBox(
+            height: 24,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                day.minutes > 0
+                    ? '${day.minutes}m'
+                    : '—',
+                style: AppTextStyles.caption.copyWith(
+                  color: isToday
+                      ? AppColors.primaryLight
+                      : AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _ChartBar extends StatelessWidget {
-  const _ChartBar({
-    required this.value,
-    required this.day,
-    required this.isToday,
-  });
-
-  final double value;
-  final String day;
-  final bool isToday;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: FractionallySizedBox(
-              heightFactor: value,
-              child: Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(
-                  maxWidth: 24,
-                  minHeight: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: isToday ? AppColors.primary : AppColors.surfaceLight,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(8),
+          ),
+          const SizedBox(
+            height: 6,
+          ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: ratio == 0
+                    ? 0.015
+                    : ratio,
+                widthFactor: 0.55,
+                child: AnimatedContainer(
+                  duration: const Duration(
+                    milliseconds: 400,
+                  ),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    color: isToday
+                        ? AppColors.primary
+                        : AppColors.primary
+                            .withValues(alpha: 0.55),
+                    borderRadius:
+                        BorderRadius.circular(
+                      AppRadius.small,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 9),
-        Text(
-          day,
-          style: AppTextStyles.caption.copyWith(
-            color: isToday ? AppColors.primaryLight : AppColors.textMuted,
-            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+          const SizedBox(
+            height: 8,
           ),
-        ),
-      ],
+          Text(
+            _dayLabel(day.date),
+            style: AppTextStyles.caption.copyWith(
+              color: isToday
+                  ? AppColors.textPrimary
+                  : AppColors.textMuted,
+              fontWeight: isToday
+                  ? FontWeight.w600
+                  : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  String _dayLabel(DateTime date) {
+    const labels = [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ];
+
+    return labels[date.weekday - 1];
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+}
+
+class _DayFocus {
+  const _DayFocus({
+    required this.date,
+    required this.minutes,
+  });
+
+  final DateTime date;
+  final int minutes;
 }

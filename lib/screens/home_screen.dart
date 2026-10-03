@@ -14,6 +14,8 @@ import 'add_task_screen.dart';
 import 'focus_screen.dart';
 import 'statistics_screen.dart';
 import 'task_details_screen.dart';
+import '../models/focus_session.dart';
+import '../services/focus_session_storage_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -26,11 +28,42 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Task> _tasks = [];
+  List<FocusSession> _focusSessions = [];
+
+  int get _todayFocusSeconds {
+    final now = DateTime.now();
+
+    return _focusSessions
+        .where(
+          (session) {
+            final date = session.startedAt;
+
+            return date.year == now.year &&
+                date.month == now.month &&
+                date.day == now.day;
+          },
+        )
+        .fold(
+          0,
+          (total, session) {
+            return total + session.completedSeconds;
+          },
+        );
+  }
+
+  int get _todayFocusMinutes {
+    return _todayFocusSeconds ~/ 60;
+  }
+
+  int get _todayFocusTargetMinutes {
+    return 125;
+  }
 
   @override
   void initState() {
     super.initState();
     _loadTasks();
+    _loadFocusSessions();
   }
 
   // ------------------------------------------------------------
@@ -54,6 +87,19 @@ class _HomeScreenState extends State<HomeScreen> {
       _tasks = savedTasks;
     });
   }
+
+  void _loadFocusSessions() {
+    final sessions =
+        FocusSessionStorageService.getSessions();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _focusSessions = sessions;
+    });
+}
 
   Future<void> _createInitialTasks() async {
     const initialTasks = [
@@ -139,12 +185,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Always reload from Hive when returning from the
-    // task details screen.
-    //
-    // This catches changes made by FocusScreen, EditTaskScreen,
-    // deletion, completion, etc.
     _loadTasks();
+    _loadFocusSessions();
 
     if (result == null) {
       return;
@@ -159,9 +201,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (result.action == TaskDetailsAction.deleted) {
-      // The task has already been deleted by TaskDetailsScreen.
-      //
-      // Reloading above keeps Home synchronized with Hive.
       _showSnackBar(
         '"${result.task.title}" was deleted.',
       );
@@ -289,15 +328,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    if (result != null) {
       _loadTasks();
+      _loadFocusSessions();
 
       if (result == FocusSessionResult.completed) {
         _showSnackBar(
           'Focus session completed successfully.',
         );
       }
-    }
   }
 
   // ------------------------------------------------------------
@@ -480,11 +518,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
+        Expanded(
           flex: 5,
           child: FocusProgressCard(
-            focusedMinutes: 85,
-            targetMinutes: 125,
+            focusedMinutes: _todayFocusMinutes,
+            targetMinutes: _todayFocusTargetMinutes,
           ),
         ),
         const SizedBox(
@@ -501,9 +539,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMobileTopSection() {
     return Column(
       children: [
-        const FocusProgressCard(
-          focusedMinutes: 85,
-          targetMinutes: 125,
+        FocusProgressCard(
+          focusedMinutes: _todayFocusMinutes,
+          targetMinutes: _todayFocusTargetMinutes,
         ),
         const SizedBox(
           height: AppSpacing.lg,

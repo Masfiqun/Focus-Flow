@@ -10,6 +10,7 @@ import '../widgets/productivity_score_card.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/statistic_card.dart';
 import '../widgets/weekly_chart.dart';
+import '../widgets/productivity_breakdown.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({
@@ -101,6 +102,19 @@ class _StatisticsScreenState
     return _todayFocusSeconds ~/ 60;
   }
 
+  double get _todayFocusScore {
+    const dailyFocusTargetMinutes = 125;
+
+    if (_todayFocusMinutes <= 0) {
+      return 0;
+    }
+
+    return (_todayFocusMinutes /
+            dailyFocusTargetMinutes *
+            100)
+        .clamp(0.0, 100.0);
+  }
+
   int get _completedSessions {
     return _sessions
         .where((session) => session.isCompleted)
@@ -122,17 +136,46 @@ class _StatisticsScreenState
       return 0;
     }
 
-    final taskScore = _completionPercentage;
+    // ----------------------------------------------------------
+    // 1. TASK COMPLETION SCORE
+    // ----------------------------------------------------------
 
-    final sessionScore = _sessions.isEmpty
-        ? 0
-        : ((_completedSessions /
-                    _sessions.length) *
-                100)
-            .round();
+    // final taskScore = _totalTasks == 0
+    //     ? 0.0
+    //     : (_completedTasks / _totalTasks) * 100;
 
-    return ((taskScore + sessionScore) / 2)
-        .round();
+    // ----------------------------------------------------------
+    // 2. FOCUS TIME SCORE
+    // ----------------------------------------------------------
+    //
+    // Target: 125 minutes of actual focus time.
+    //
+    // Once the user reaches the target, this component is capped
+    // at 100 instead of allowing the overall score to exceed 100.
+    //
+
+    // const dailyFocusTargetMinutes = 125;
+
+    // final focusScore = _todayFocusScore;
+
+    // ----------------------------------------------------------
+    // 3. SESSION COMPLETION SCORE
+    // ----------------------------------------------------------
+
+    // final sessionScore = _sessions.isEmpty
+    //     ? 0.0
+    //     : (_completedSessions / _sessions.length) * 100;
+
+    // ----------------------------------------------------------
+    // FINAL SCORE
+    // ----------------------------------------------------------
+
+    final score =
+        (_taskScore * 0.40) +
+        (_focusScore * 0.40) +
+        (_sessionScore * 0.20);
+
+    return score.round().clamp(0, 100);
   }
 
   int get _longestFocusMinutes {
@@ -150,6 +193,37 @@ class _StatisticsScreenState
         );
 
     return longestSeconds ~/ 60;
+  }
+
+  double get _taskScore {
+    if (_totalTasks == 0) {
+      return 0;
+    }
+
+    return ((_completedTasks / _totalTasks) * 100)
+        .clamp(0.0, 100.0);
+  }
+
+  double get _focusScore {
+    const dailyFocusTargetMinutes = 125;
+
+    if (_todayFocusMinutes <= 0) {
+      return 0;
+    }
+
+    return ((_todayFocusMinutes /
+                dailyFocusTargetMinutes) *
+            100)
+        .clamp(0.0, 100.0);
+  }
+
+  double get _sessionScore {
+    if (_sessions.isEmpty) {
+      return 0;
+    }
+
+    return ((_completedSessions / _sessions.length) * 100)
+        .clamp(0.0, 100.0);
   }
 
   String get _focusTimeLabel {
@@ -257,6 +331,14 @@ class _StatisticsScreenState
                 label: _productivityLabel,
               ),
 
+              const SizedBox(height: 16),
+
+              ProductivityBreakdown(
+                taskScore: _taskScore,
+                focusScore: _focusScore,
+                sessionScore: _sessionScore,
+              ),
+
               const SizedBox(height: 24),
 
               _buildTodayCard(),
@@ -271,7 +353,9 @@ class _StatisticsScreenState
 
               const SizedBox(height: 24),
 
-              const WeeklyChart(),
+              WeeklyChart(
+                sessions: _sessions,
+              ),
 
               const SizedBox(height: 24),
 
@@ -279,7 +363,10 @@ class _StatisticsScreenState
 
               const SizedBox(height: 12),
 
-              const AchievementCard(),
+              AchievementCard(
+                tasks: _tasks,
+                sessions: _sessions,
+              ),
 
               const SizedBox(height: 20),
             ]),
@@ -316,6 +403,14 @@ class _StatisticsScreenState
                     label: _productivityLabel,
                   ),
 
+                  const SizedBox(height: 16),
+
+                  ProductivityBreakdown(
+                    taskScore: _taskScore,
+                    focusScore: _focusScore,
+                    sessionScore: _sessionScore,
+                  ),
+
                   const SizedBox(height: 24),
 
                   _buildTodayCard(),
@@ -330,7 +425,9 @@ class _StatisticsScreenState
 
                   const SizedBox(height: 24),
 
-                  const WeeklyChart(),
+                  WeeklyChart(
+                    sessions: _sessions,
+                  ),
 
                   const SizedBox(height: 24),
 
@@ -338,7 +435,10 @@ class _StatisticsScreenState
 
                   const SizedBox(height: 12),
 
-                  const AchievementCard(),
+                  AchievementCard(
+                    tasks: _tasks,
+                    sessions: _sessions,
+                  ),
                 ]),
               ),
             ),
