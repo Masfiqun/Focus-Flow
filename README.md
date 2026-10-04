@@ -852,7 +852,6 @@ focus_flow/
 | **Material Design** | UI components and design system |
 | **Google Fonts** | Poppins typography |
 | **Hive** | Local data persistence |
-| **FL Chart** | Productivity charts and visualization |
 | **Git** | Version control |
 | **GitHub** | Source-code hosting |
 
