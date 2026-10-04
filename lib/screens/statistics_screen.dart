@@ -298,6 +298,62 @@ class _StatisticsScreenState
     return 'Build your momentum';
   }
 
+  Widget _buildEmptyStatisticsState({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 24,
+        vertical: 32,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.divider,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(
+                alpha: 0.10,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.primaryLight,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: AppTextStyles.body.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            description,
+            style: AppTextStyles.caption.copyWith(
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   // ------------------------------------------------------------
   // BUILD
   // ------------------------------------------------------------
@@ -513,19 +569,21 @@ class _StatisticsScreenState
   // ------------------------------------------------------------
 
   Widget _buildTodayCard() {
+    final bool hasTodaySessions =
+        _todaySessions.isNotEmpty;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF15131D),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFF292633),
+          color: AppColors.divider,
         ),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             "Today's Focus",
@@ -533,7 +591,9 @@ class _StatisticsScreenState
           ),
           const SizedBox(height: 6),
           Text(
-            'Actual focus time recorded today.',
+            hasTodaySessions
+                ? 'Actual focus time recorded today.'
+                : 'No focus sessions recorded today yet.',
             style: AppTextStyles.bodySecondary,
           ),
           const SizedBox(height: 18),
@@ -549,8 +609,7 @@ class _StatisticsScreenState
               const SizedBox(width: 12),
               Expanded(
                 child: _buildTodayMetric(
-                  icon:
-                      Icons.check_circle_outline_rounded,
+                  icon: Icons.check_circle_outline_rounded,
                   value: '${_todaySessions.length}',
                   label: 'Sessions',
                 ),
@@ -639,49 +698,12 @@ class _StatisticsScreenState
   }
 
   Widget _buildEmptySessionHistory() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.divider,
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(
-                alpha: 0.10,
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.history_rounded,
-              color: AppColors.primaryLight,
-              size: 24,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'No focus sessions yet',
-            style: AppTextStyles.body.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Complete a focus session to see it here.',
-            style: AppTextStyles.caption,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return _buildEmptyStatisticsState(
+      icon: Icons.history_rounded,
+      title: 'No focus sessions yet',
+      description:
+          'Complete a focus session to start building '
+          'your productivity history.',
     );
   }
 
@@ -694,64 +716,54 @@ class _StatisticsScreenState
       builder: (context, constraints) {
         final width = constraints.maxWidth;
 
+        final cards = [
+          StatisticCard(
+            icon: Icons.schedule_rounded,
+            value: _focusTimeLabel,
+            label: 'Focus time',
+            trend: _totalFocusMinutes == 0
+                ? 'No focus recorded'
+                : 'Actual focus time',
+          ),
+          StatisticCard(
+            icon: Icons.check_circle_outline_rounded,
+            value: '$_completedSessions',
+            label: 'Sessions',
+            trend: _sessionTrend,
+          ),
+          StatisticCard(
+            icon: Icons.task_alt_rounded,
+            value: '$_completionPercentage%',
+            label: 'Completion',
+            trend: _completionTrend,
+          ),
+        ];
+
         if (width >= 650) {
           return Row(
             children: [
-              Expanded(
-                child: StatisticCard(
-                  icon: Icons.schedule_rounded,
-                  value: _focusTimeLabel,
-                  label: 'Focus time',
-                  trend: _totalFocusMinutes == 0
-                      ? 'No focus recorded'
-                      : 'Actual focus time',
+              for (int index = 0;
+                  index < cards.length;
+                  index++) ...[
+                Expanded(
+                  child: cards[index],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: StatisticCard(
-                  icon:
-                      Icons.check_circle_outline_rounded,
-                  value: '$_completedSessions',
-                  label: 'Sessions',
-                  trend: _sessionTrend,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: StatisticCard(
-                  icon: Icons.task_alt_rounded,
-                  value: '$_completionPercentage%',
-                  label: 'Completion',
-                  trend: _completionTrend,
-                ),
-              ),
+                if (index != cards.length - 1)
+                  const SizedBox(width: 12),
+              ],
             ],
           );
         }
 
-        return Row(
+        return Column(
           children: [
-            Expanded(
-              child: StatisticCard(
-                icon: Icons.schedule_rounded,
-                value: _focusTimeLabel,
-                label: 'Focus time',
-                trend: _totalFocusMinutes == 0
-                    ? 'No focus recorded'
-                    : 'Actual focus',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: StatisticCard(
-                icon:
-                    Icons.check_circle_outline_rounded,
-                value: '$_completedSessions',
-                label: 'Sessions',
-                trend: _sessionTrend,
-              ),
-            ),
+            for (int index = 0;
+                index < cards.length;
+                index++) ...[
+              cards[index],
+              if (index != cards.length - 1)
+                const SizedBox(height: 12),
+            ],
           ],
         );
       },
