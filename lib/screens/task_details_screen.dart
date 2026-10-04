@@ -9,6 +9,7 @@ import '../widgets/app_page_route.dart';
 import 'edit_task_screen.dart';
 import 'focus_screen.dart';
 import '../services/task_storage_service.dart';
+import '../services/focus_session_storage_service.dart';
 
 enum TaskDetailsAction {
   updated,
@@ -168,13 +169,52 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       return;
     }
 
-    Navigator.pop<TaskDetailsResult>(
-      context,
-      TaskDetailsResult(
-        task: _task,
-        action: TaskDetailsAction.deleted,
-      ),
-    );
+    try {
+      // Remove all focus-session history associated
+      // with this task first.
+      await FocusSessionStorageService.deleteSessionsForTask(
+        _task.id,
+      );
+
+      // Then remove the task itself.
+      await TaskStorageService.deleteTask(
+        _task.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop<TaskDetailsResult>(
+        context,
+        TaskDetailsResult(
+          task: _task,
+          action: TaskDetailsAction.deleted,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to delete the task. Please try again.',
+            style: AppTextStyles.body.copyWith(
+              color: Colors.white,
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.surfaceLight,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+              AppRadius.medium,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   IconData _getCategoryIcon(String category) {

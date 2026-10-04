@@ -33,6 +33,10 @@ class FocusScreen extends StatefulWidget {
 class _FocusScreenState extends State<FocusScreen> {
   static const int _defaultDurationMinutes = 25;
 
+  // Persist a running session every 10 seconds instead
+  // of writing to Hive every second.
+  static const int _persistenceIntervalSeconds = 10;
+
   Timer? _timer;
 
   late int _totalSeconds;
@@ -41,9 +45,11 @@ class _FocusScreenState extends State<FocusScreen> {
   late String _sessionId;
   late DateTime _startedAt;
 
+  int _secondsSinceLastSave = 0;
+
   bool _isRunning = false;
   bool _hasCompleted = false;
-  bool _sessionSaved = false;
+  bool _isCompleting = false;
 
   Task? get _task => widget.task;
 
@@ -90,11 +96,12 @@ class _FocusScreenState extends State<FocusScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-
-    // The important session states are already saved when
-    // pausing, skipping, or completing.
     super.dispose();
   }
+
+  // ------------------------------------------------------------
+  // SESSION
+  // ------------------------------------------------------------
 
   void _createNewSession() {
     _sessionId =
@@ -102,7 +109,7 @@ class _FocusScreenState extends State<FocusScreen> {
 
     _startedAt = DateTime.now();
 
-    _sessionSaved = false;
+    _secondsSinceLastSave = 0;
   }
 
   Future<void> _saveCurrentSession({
@@ -126,7 +133,7 @@ class _FocusScreenState extends State<FocusScreen> {
       session,
     );
 
-    _sessionSaved = true;
+    _secondsSinceLastSave = 0;
   }
 
   Future<void> _saveCompletedSession() async {
@@ -144,7 +151,7 @@ class _FocusScreenState extends State<FocusScreen> {
       session,
     );
 
-    _sessionSaved = true;
+    _secondsSinceLastSave = 0;
   }
 
   Future<void> _markTaskCompleted() async {
@@ -166,6 +173,10 @@ class _FocusScreenState extends State<FocusScreen> {
       completedTask,
     );
   }
+
+  // ------------------------------------------------------------
+  // TIMER
+  // ------------------------------------------------------------
 
   void _startTimer() {
     if (_isRunning || _hasCompleted) {
@@ -201,8 +212,13 @@ class _FocusScreenState extends State<FocusScreen> {
           _remainingSeconds--;
         });
 
-        // Keep the currently accumulated focus time persisted.
-        _saveCurrentSession();
+        _secondsSinceLastSave++;
+
+        // Persist a running session every 10 seconds.
+        if (_secondsSinceLastSave >=
+            _persistenceIntervalSeconds) {
+          _saveCurrentSession();
+        }
       },
     );
   }
@@ -218,6 +234,7 @@ class _FocusScreenState extends State<FocusScreen> {
       _isRunning = false;
     });
 
+    // Always save immediately when the user pauses.
     _saveCurrentSession();
   }
 
@@ -234,6 +251,10 @@ class _FocusScreenState extends State<FocusScreen> {
   }
 
   void _resetTimer() {
+    if (_isCompleting) {
+      return;
+    }
+
     _timer?.cancel();
 
     setState(() {
@@ -247,7 +268,19 @@ class _FocusScreenState extends State<FocusScreen> {
     _startTimer();
   }
 
+  // ------------------------------------------------------------
+  // SESSION COMPLETION
+  // ------------------------------------------------------------
+
   Future<void> _completeSession() async {
+    if (!_hasCompleted || _isCompleting) {
+      return;
+    }
+
+    _isCompleting = true;
+
+    _timer?.cancel();
+
     await _saveCompletedSession();
 
     await _markTaskCompleted();
@@ -269,7 +302,15 @@ class _FocusScreenState extends State<FocusScreen> {
   }
 
   Future<void> _skipSession() async {
+    if (_hasCompleted || _isCompleting) {
+      return;
+    }
+
     _timer?.cancel();
+
+    setState(() {
+      _isRunning = false;
+    });
 
     await _saveCurrentSession();
 
@@ -282,6 +323,10 @@ class _FocusScreenState extends State<FocusScreen> {
       FocusSessionResult.skipped,
     );
   }
+
+  // ------------------------------------------------------------
+  // COMPLETION DIALOG
+  // ------------------------------------------------------------
 
   Future<void> _showCompletionDialog() async {
     await Future<void>.delayed(Duration.zero);
@@ -347,6 +392,10 @@ class _FocusScreenState extends State<FocusScreen> {
     );
   }
 
+  // ------------------------------------------------------------
+  // FORMATTING
+  // ------------------------------------------------------------
+
   String _formatTime(int totalSeconds) {
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
@@ -377,6 +426,10 @@ class _FocusScreenState extends State<FocusScreen> {
     return '$minutes min $seconds sec';
   }
 
+  // ------------------------------------------------------------
+  // BUILD
+  // ------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -389,6 +442,10 @@ class _FocusScreenState extends State<FocusScreen> {
       ),
     );
   }
+
+  // ------------------------------------------------------------
+  // MOBILE
+  // ------------------------------------------------------------
 
   Widget _buildMobile(BuildContext context) {
     return CustomScrollView(
@@ -404,9 +461,13 @@ class _FocusScreenState extends State<FocusScreen> {
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               _buildHeader(),
+
               const SizedBox(height: 28),
+
               _buildSessionLabel(),
+
               const SizedBox(height: 22),
+
               Center(
                 child: FocusTimer(
                   progress: _progress,
@@ -415,14 +476,23 @@ class _FocusScreenState extends State<FocusScreen> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 24),
+
               _buildProgressText(),
+
               const SizedBox(height: 24),
+
               _buildTaskCard(),
+
               const SizedBox(height: 20),
+
               _buildFocusModeChip(),
+
               const SizedBox(height: 26),
+
               _buildControls(),
+
               const SizedBox(height: 20),
             ]),
           ),
@@ -430,6 +500,10 @@ class _FocusScreenState extends State<FocusScreen> {
       ],
     );
   }
+
+  // ------------------------------------------------------------
+  // TABLET
+  // ------------------------------------------------------------
 
   Widget _buildTablet(BuildContext context) {
     return Center(
@@ -439,11 +513,13 @@ class _FocusScreenState extends State<FocusScreen> {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 700;
+            final isWide =
+                constraints.maxWidth >= 700;
 
             if (isWide) {
               return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+                physics:
+                    const BouncingScrollPhysics(),
                 padding: const EdgeInsets.all(32),
                 child: Row(
                   crossAxisAlignment:
@@ -475,9 +551,13 @@ class _FocusScreenState extends State<FocusScreen> {
       child: Column(
         children: [
           _buildHeader(),
+
           const SizedBox(height: 30),
+
           _buildTimerSection(),
+
           const SizedBox(height: 28),
+
           _buildDetailsSection(),
         ],
       ),
@@ -489,7 +569,9 @@ class _FocusScreenState extends State<FocusScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildSessionLabel(),
+
         const SizedBox(height: 22),
+
         FocusTimer(
           progress: _progress,
           timeText: _formatTime(
@@ -497,7 +579,9 @@ class _FocusScreenState extends State<FocusScreen> {
           ),
           size: 280,
         ),
+
         const SizedBox(height: 24),
+
         _buildProgressText(),
       ],
     );
@@ -508,13 +592,21 @@ class _FocusScreenState extends State<FocusScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildTaskCard(),
+
         const SizedBox(height: 20),
+
         _buildFocusModeChip(),
+
         const SizedBox(height: 26),
+
         _buildControls(),
       ],
     );
   }
+
+  // ------------------------------------------------------------
+  // HEADER
+  // ------------------------------------------------------------
 
   Widget _buildHeader() {
     return Row(
@@ -535,7 +627,9 @@ class _FocusScreenState extends State<FocusScreen> {
             color: AppColors.textPrimary,
           ),
         ),
+
         const SizedBox(width: 13),
+
         Expanded(
           child: Column(
             crossAxisAlignment:
@@ -545,7 +639,9 @@ class _FocusScreenState extends State<FocusScreen> {
                 'Focus Session',
                 style: AppTextStyles.heading2,
               ),
+
               const SizedBox(height: 2),
+
               Text(
                 _isRunning
                     ? 'Stay focused. You got this.'
@@ -561,6 +657,10 @@ class _FocusScreenState extends State<FocusScreen> {
     );
   }
 
+  // ------------------------------------------------------------
+  // SESSION LABEL
+  // ------------------------------------------------------------
+
   Widget _buildSessionLabel() {
     return Text(
       'DEEP WORK',
@@ -573,6 +673,10 @@ class _FocusScreenState extends State<FocusScreen> {
     );
   }
 
+  // ------------------------------------------------------------
+  // PROGRESS
+  // ------------------------------------------------------------
+
   Widget _buildProgressText() {
     final percentage = (_progress * 100).round();
 
@@ -583,11 +687,14 @@ class _FocusScreenState extends State<FocusScreen> {
           style: AppTextStyles.bodySecondary,
           textAlign: TextAlign.center,
         ),
+
         const SizedBox(height: 8),
+
         FractionallySizedBox(
           widthFactor: 0.72,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(100),
+            borderRadius:
+                BorderRadius.circular(100),
             child: LinearProgressIndicator(
               value: _progress,
               minHeight: 5,
@@ -600,7 +707,9 @@ class _FocusScreenState extends State<FocusScreen> {
             ),
           ),
         ),
+
         const SizedBox(height: 8),
+
         Text(
           '${_formatCompletedTime()} focused',
           style: AppTextStyles.caption,
@@ -610,12 +719,20 @@ class _FocusScreenState extends State<FocusScreen> {
     );
   }
 
+  // ------------------------------------------------------------
+  // TASK
+  // ------------------------------------------------------------
+
   Widget _buildTaskCard() {
     return SessionTaskCard(
       title: _taskTitle,
       category: _taskCategory,
     );
   }
+
+  // ------------------------------------------------------------
+  // FOCUS MODE
+  // ------------------------------------------------------------
 
   Widget _buildFocusModeChip() {
     return const Center(
@@ -626,6 +743,10 @@ class _FocusScreenState extends State<FocusScreen> {
     );
   }
 
+  // ------------------------------------------------------------
+  // CONTROLS
+  // ------------------------------------------------------------
+
   Widget _buildControls() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -634,7 +755,9 @@ class _FocusScreenState extends State<FocusScreen> {
           icon: Icons.restart_alt_rounded,
           onTap: _resetTimer,
         ),
+
         const SizedBox(width: 18),
+
         Container(
           width: 68,
           height: 68,
@@ -674,7 +797,9 @@ class _FocusScreenState extends State<FocusScreen> {
             ),
           ),
         ),
+
         const SizedBox(width: 18),
+
         _buildSecondaryControl(
           icon: Icons.skip_next_rounded,
           onTap: _skipSession,

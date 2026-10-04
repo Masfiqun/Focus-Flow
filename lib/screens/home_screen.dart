@@ -17,6 +17,16 @@ import 'task_details_screen.dart';
 import '../models/focus_session.dart';
 import '../services/focus_session_storage_service.dart';
 
+class _DeletedTaskBackup {
+  final Task task;
+  final List<FocusSession> sessions;
+
+  const _DeletedTaskBackup({
+    required this.task,
+    required this.sessions,
+  });
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -248,68 +258,131 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    await TaskStorageService.deleteTask(
-      task.id,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _tasks = _tasks
-          .where(
-            (currentTask) => currentTask.id != task.id,
-          )
-          .toList();
-    });
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '"${task.title}" was deleted.',
-          style: AppTextStyles.body.copyWith(
-            color: Colors.white,
-          ),
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.surfaceLight,
-        duration: const Duration(seconds: 4),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-            AppRadius.medium,
-          ),
-        ),
-        action: SnackBarAction(
-          label: 'UNDO',
-          textColor: AppColors.primaryLight,
-          onPressed: () async {
-            await TaskStorageService.saveTask(
-              task,
-            );
-
-            if (!mounted) {
-              return;
-            }
-
-            final restoreIndex = taskIndex > _tasks.length
-                ? _tasks.length
-                : taskIndex;
-
-            setState(() {
-              _tasks = List<Task>.from(_tasks)
-                ..insert(
-                  restoreIndex,
-                  task,
-                );
-            });
-          },
-        ),
+    // Create a complete backup before deleting anything.
+    final deletedTaskBackup = _DeletedTaskBackup(
+      task: task,
+      sessions: FocusSessionStorageService.getSessionsForTask(
+        task.id,
       ),
     );
+
+    try {
+      // Delete the task's focus-session history first.
+      await FocusSessionStorageService.deleteSessionsForTask(
+        task.id,
+      );
+
+      // Then delete the task itself.
+      await TaskStorageService.deleteTask(
+        task.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _tasks = _tasks
+            .where(
+              (currentTask) => currentTask.id != task.id,
+            )
+            .toList();
+      });
+
+      // Keep the Home statistics in sync.
+      _loadFocusSessions();
+
+      ScaffoldMessenger.of(context)
+          .hideCurrentSnackBar();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '"${task.title}" was deleted.',
+            style: AppTextStyles.body.copyWith(
+              color: Colors.white,
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.surfaceLight,
+          duration: const Duration(seconds: 5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+              AppRadius.medium,
+            ),
+          ),
+          action: SnackBarAction(
+            label: 'UNDO',
+            textColor: AppColors.primaryLight,
+            onPressed: () async {
+              await _restoreDeletedTask(
+                deletedTaskBackup,
+                taskIndex,
+              );
+            },
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+          .hideCurrentSnackBar();
+
+      _showSnackBar(
+        'Unable to delete the task. Please try again.',
+      );
+    }
   }
+
+  Future<void> _restoreDeletedTask(
+      _DeletedTaskBackup backup,
+      int originalIndex,
+    ) async {
+      try {
+        // Restore the task.
+        await TaskStorageService.saveTask(
+          backup.task,
+        );
+
+        // Restore all focus sessions that belonged to it.
+        await FocusSessionStorageService.restoreSessions(
+          backup.sessions,
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        final safeIndex = originalIndex > _tasks.length
+            ? _tasks.length
+            : originalIndex;
+
+        setState(() {
+          _tasks = List<Task>.from(_tasks)
+            ..insert(
+              safeIndex,
+              backup.task,
+            );
+        });
+
+        _loadFocusSessions();
+
+        _showSnackBar(
+          '"${backup.task.title}" was restored.',
+        );
+      } catch (_) {
+        if (!mounted) {
+          return;
+        }
+
+        _showSnackBar(
+          'Unable to restore the task. Please try again.',
+        );
+      }
+    }
 
   // ------------------------------------------------------------
   // FOCUS SCREEN
@@ -721,25 +794,51 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.task_alt_rounded,
-            size: 46,
-            color: AppColors.textMuted,
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(
+                alpha: 0.10,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.task_alt_rounded,
+              size: 32,
+              color: AppColors.primaryLight,
+            ),
           ),
           const SizedBox(
-            height: AppSpacing.md,
+            height: AppSpacing.lg,
           ),
           Text(
             'No tasks yet',
             style: AppTextStyles.heading3,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(
             height: AppSpacing.xs,
           ),
           Text(
-            'Create your first task to get started.',
+            'Create your first task and start '
+            'building your focus routine.',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodySecondary,
+          ),
+          const SizedBox(
+            height: AppSpacing.lg,
+          ),
+          ElevatedButton.icon(
+            onPressed: _openAddTaskScreen,
+            icon: const Icon(
+              Icons.add_rounded,
+              size: 19,
+            ),
+            label: Text(
+              'Add Your First Task',
+              style: AppTextStyles.button,
+            ),
           ),
         ],
       ),

@@ -13,6 +13,7 @@ import '../widgets/statistic_card.dart';
 import '../widgets/weekly_chart.dart';
 import '../widgets/productivity_breakdown.dart';
 import '../widgets/session_history_card.dart';
+import '../main.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({
@@ -25,7 +26,7 @@ class StatisticsScreen extends StatefulWidget {
 }
 
 class _StatisticsScreenState
-    extends State<StatisticsScreen> {
+    extends State<StatisticsScreen> with RouteAware {
   List<Task> _tasks = [];
   List<FocusSession> _sessions = [];
 
@@ -41,6 +42,33 @@ class _StatisticsScreenState
   void initState() {
     super.initState();
     _loadStatistics();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final route = ModalRoute.of(context);
+
+    if (route is PageRoute) {
+      routeObserver.subscribe(
+        this,
+        route,
+      );
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // Called when another route above StatisticsScreen
+    // is popped and StatisticsScreen becomes visible again.
+    _loadStatistics();
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
   }
 
   void _loadStatistics() {

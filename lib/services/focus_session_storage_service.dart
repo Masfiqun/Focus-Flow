@@ -70,6 +70,64 @@ class FocusSessionStorageService {
     await _sessionBox.delete(sessionId);
   }
 
+  /// Returns all focus sessions associated with [taskId].
+  ///
+  /// Quick Focus sessions have a null taskId and are therefore
+  /// never returned by this method.
+  static List<FocusSession> getSessionsForTask(
+    String taskId,
+  ) {
+    return getSessions()
+        .where(
+          (session) => session.taskId == taskId,
+        )
+        .toList();
+  }
+
+  /// Deletes every focus session associated with [taskId].
+  ///
+  /// Quick Focus sessions are preserved because their taskId is null.
+  static Future<void> deleteSessionsForTask(
+    String taskId,
+  ) async {
+    final sessionIds = <dynamic>[];
+
+    for (final entry in _sessionBox.toMap().entries) {
+      final value = entry.value;
+
+      if (value is! Map) {
+        continue;
+      }
+
+      try {
+        final session = FocusSession.fromMap(value);
+
+        if (session.taskId == taskId) {
+          sessionIds.add(entry.key);
+        }
+      } catch (_) {
+        // Ignore invalid stored records.
+      }
+    }
+
+    if (sessionIds.isEmpty) {
+      return;
+    }
+
+    await _sessionBox.deleteAll(
+      sessionIds,
+    );
+  }
+
+  /// Restores a collection of previously deleted sessions.
+  static Future<void> restoreSessions(
+    List<FocusSession> sessions,
+  ) async {
+    for (final session in sessions) {
+      await saveSession(session);
+    }
+  }
+
   static Future<void> clearSessions() async {
     await _sessionBox.clear();
   }
@@ -94,3 +152,4 @@ class FocusSessionStorageService {
     return _sessionBox.length;
   }
 }
+
