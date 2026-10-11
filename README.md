@@ -1292,6 +1292,191 @@ The final application demonstrates a complete Flutter development workflow cover
 
 ---
 
+# Task 4: BMI Calculator
+
+## Overview
+
+The BMI calculator allows users to enter their height and weight, calculate their BMI, and view the corresponding adult BMI classification. The feature follows the existing FocusFlow design system and responsive layout principles.
+
+## Features
+
+- **Home Screen Integration:** Access the BMI calculator through the profile icon.
+- **Height and Weight Inputs:** Enter height in centimeters and weight in kilograms.
+- **BMI Calculation:** Calculate BMI using the standard metric formula.
+- **Input Validation:** Validate user input before performing calculations.
+- **BMI Classification:** Display an adult BMI category based on the calculated result.
+- **Result Display:** Present the calculated BMI and its classification.
+- **Reset Functionality:** Clear the inputs and previous result.
+- **Responsive UI:** Support different screen sizes.
+- **Consistent Styling:** Reuse FocusFlow's existing colors, typography, spacing, and rounded components.
+
+## BMI Calculation
+
+### Formula
+
+Body Mass Index (BMI) is calculated by dividing a person's weight in kilograms by the square of their height in meters.
+
+\[
+BMI = \frac{\text{Weight (kg)}}{\text{Height (m)}^2}
+\]
+
+Since the height input is provided in centimeters, it must first be converted into meters:
+
+\[
+\text{Height (m)} = \frac{\text{Height (cm)}}{100}
+\]
+
+The calculation in Dart is:
+
+```dart
+final heightInMeters = heightInCm / 100;
+final bmi = weightInKg / (heightInMeters * heightInMeters);
+```
+
+### Example
+
+Suppose the user enters:
+
+- **Height:** 175 cm
+- **Weight:** 70 kg
+
+Convert the height to meters:
+
+\[
+175 / 100 = 1.75 \text{ m}
+\]
+
+Calculate BMI:
+
+\[
+BMI = \frac{70}{1.75^2}
+\]
+
+\[
+BMI = \frac{70}{3.0625} \approx 22.86
+\]
+
+The resulting BMI is approximately **22.86**.
+
+### Adult BMI Categories
+
+The calculator uses the following standard adult BMI classification ranges:
+
+| BMI Range | Classification |
+|---|---|
+| Below 18.5 | Underweight |
+| 18.5 to below 25.0 | Healthy weight |
+| 25.0 to below 30.0 | Overweight |
+| 30.0 and above | Obesity range |
+
+The category must be determined using the unrounded BMI value. Rounding should only be applied when displaying the result.
+
+Example Dart implementation:
+
+```dart
+String getBmiCategory(double bmi) {
+  if (bmi < 18.5) {
+    return 'Underweight';
+  } else if (bmi < 25.0) {
+    return 'Healthy weight';
+  } else if (bmi < 30.0) {
+    return 'Overweight';
+  } else {
+    return 'Obesity range';
+  }
+}
+```
+
+These classification ranges are intended for adults and are not appropriate for assessing children and teenagers, who require age-specific interpretation.
+
+### Input Validation
+
+The application should validate input before calculating BMI.
+
+- Height and weight must not be empty.
+- Both values must be valid numbers.
+- Height and weight must be greater than zero.
+- Invalid input must not produce a BMI result.
+- Non-finite calculation results must be rejected.
+- Reasonable input limits should be applied to prevent implausible values.
+
+## Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Flutter | Cross-platform application framework |
+| Dart | Application logic and BMI calculation |
+| Material Design | UI components and interactions |
+| Google Fonts — Poppins | Typography |
+| Flutter Navigator | Screen navigation |
+| StatefulWidget | Local form and result state |
+
+The BMI calculation is performed locally and does not require a remote API or database.
+
+## 📊 BMI Calculator
+
+| BMI Calculator — Overview                                         |                                           |
+| ------------------------------------------------------------- | ------------------------------------------------------------- |
+| <img src="assets/screenshots/Task-4/bmi-1.jpeg" width="180"> | <img src="assets/screenshots/Task-4/bmi-2.jpeg" width="180"> |
+
+---
+
+## How to Use
+
+1. Launch FocusFlow.
+2. Tap the profile icon on the home screen.
+3. Enter your height in centimeters.
+4. Enter your weight in kilograms.
+5. Submit the values to calculate BMI.
+6. Review the BMI result and its classification.
+7. Reset the form to perform another calculation.
+
+## Design and Responsiveness
+
+The BMI screen follows FocusFlow's existing design system, including:
+
+- Dark theme and consistent color palette.
+- Poppins typography.
+- Shared spacing and corner-radius constants.
+- Clearly separated input and result sections.
+- Scrollable content and responsive layouts.
+
+The interface should remain usable on small phones, larger mobile devices, tablets, and landscape layouts without horizontal overflow.
+
+## Testing Checklist
+
+Before considering Task 4 complete, verify the following:
+
+- ✅ Valid height and weight produce the expected BMI.
+- ✅ Empty fields display appropriate validation messages.
+- ✅ Invalid and non-numeric input is rejected.
+- ✅ Zero and negative values are rejected.
+- ✅ BMI values of 18.5, 25.0, and 30.0 are classified correctly.
+- ✅ Reset clears the input fields and previous result.
+- ✅ The profile icon opens the BMI screen.
+- ✅ The interface works on narrow displays and in landscape orientation.
+- ✅ No layout overflow occurs.
+- ✅ The project passes `flutter analyze`.
+
+## Limitations
+
+- BMI is a screening measure, not a direct measurement of body fat or a diagnosis of health.
+- The displayed classification ranges apply to adults.
+- BMI history and progress tracking are not included unless implemented separately.
+- The calculator does not replace individualized medical advice.
+
+## Future Enhancements
+
+Potential improvements include:
+
+- Support for imperial units (feet, inches, and pounds).
+- Local BMI calculation history.
+- Unit conversion.
+- Accessibility improvements.
+- Automated unit and widget tests.
+
+---
+
 # 👨‍💻 Author
 
 **Md. Masfiqun Ahmed**
