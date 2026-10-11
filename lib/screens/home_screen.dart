@@ -16,6 +16,7 @@ import 'statistics_screen.dart';
 import 'task_details_screen.dart';
 import '../models/focus_session.dart';
 import '../services/focus_session_storage_service.dart';
+import 'bmi_screen.dart';
 
 class _DeletedTaskBackup {
   final Task task;
@@ -110,6 +111,15 @@ class _HomeScreenState extends State<HomeScreen> {
       _focusSessions = sessions;
     });
 }
+
+  void _openBmiScreen() {
+    Navigator.push(
+      context,
+      AppPageRoute(
+        page: const BmiScreen(),
+      ),
+    );
+  }
 
   Future<void> _createInitialTasks() async {
     const initialTasks = [
@@ -561,23 +571,35 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildProfileButton() {
     return Semantics(
       button: true,
-      label: 'Profile',
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
+      label: 'Open BMI Calculator',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(
+          AppRadius.medium,
+        ),
+        child: InkWell(
+          onTap: _openBmiScreen,
           borderRadius: BorderRadius.circular(
             AppRadius.medium,
           ),
-          border: Border.all(
-            color: AppColors.divider,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(
+                AppRadius.medium,
+              ),
+              border: Border.all(
+                color: AppColors.divider,
+              ),
+            ),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              color: AppColors.textSecondary,
+              size: 21,
+            ),
           ),
-        ),
-        child: const Icon(
-          Icons.person_outline_rounded,
-          color: AppColors.textSecondary,
-          size: 21,
         ),
       ),
     );
